@@ -1,0 +1,435 @@
+openapi: 3.0.0
+info:
+  title: Entity Containment API
+  version: "0.1"
+servers:
+- url: /
+security:
+- jwtAuth: []
+tags:
+- description: Containment service
+  name: containment
+paths:
+  /:
+    get:
+      operationId: healthCheck
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+          description: health check response message
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+          description: an internal error occurred
+      security: []
+      summary: Health check
+      tags:
+      - containment
+  /containment/v1/organizations/{organization_id}/devices/{vendor}/{device_id}/contain:
+    put:
+      description: Request containment of the specified device
+      operationId: requestContainment
+      parameters:
+      - description: The id of a organization
+        explode: false
+        in: path
+        name: organization_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: "key used to identify vendor to use, e.g. `crowdstrike`"
+        explode: false
+        in: path
+        name: vendor
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: ID of the device as defined by vendor (e.g. Crowdstrike)
+        explode: false
+        in: path
+        name: device_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "202":
+          description: Containment requested succesfully
+        "401":
+          description: Missing/invalid awth credentials
+        "403":
+          description: Insufficient authorization level
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorUnknown'
+          description: error returned for a 404 indicating one of the provided params
+            us unknown
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+          description: an internal error occurred
+      tags:
+      - containment
+  /containment/v1/organizations/{organization_id}/devices/{vendor}/{device_id}/lift-containment:
+    put:
+      description: Request to lift containment for the specified device
+      operationId: requestLiftContainment
+      parameters:
+      - description: The id of a organization
+        explode: false
+        in: path
+        name: organization_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: "key used to identify vendor to use, e.g. `crowdstrike`"
+        explode: false
+        in: path
+        name: vendor
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: ID of the device as defined by vendor (e.g. Crowdstrike)
+        explode: false
+        in: path
+        name: device_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "202":
+          description: Lift containment requested succesfully
+        "401":
+          description: Missing/invalid awth credentials
+        "403":
+          description: Insufficient authorization level
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorUnknown'
+          description: error returned for a 404 indicating one of the provided params
+            us unknown
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+          description: an internal error occurred
+      tags:
+      - containment
+  /containment/v1/organizations/{organization_id}/devices/{vendor}/containment-status:
+    post:
+      description: Get the containment status of a specific device for an organization
+      operationId: bulkLookupContainmentStatus
+      parameters:
+      - description: The id of a organization
+        explode: false
+        in: path
+        name: organization_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: "key used to identify vendor to use, e.g. `crowdstrike`"
+        explode: false
+        in: path
+        name: vendor
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceIDList'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentStatusResponse'
+          description: containment status list ordered by list of requested device
+            IDs
+        "401":
+          description: Missing/invalid awth credentials
+        "403":
+          description: Insufficient authorization level
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorUnknown'
+          description: error returned for a 404 indicating one of the provided params
+            us unknown
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+          description: an internal error occurred
+      tags:
+      - containment
+  /containment/v1/organizations/{organization_id}/{vendor}/containment-active:
+    get:
+      description: Lookup if a specific organization has containment active
+      operationId: lookupIsContainmentActive
+      parameters:
+      - description: The id of a organization
+        explode: false
+        in: path
+        name: organization_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: "key used to identify vendor to use, e.g. `crowdstrike`"
+        explode: false
+        in: path
+        name: vendor
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentActiveResponse'
+          description: whether or not containment is active for a customer
+        "401":
+          description: Missing/invalid awth credentials
+        "403":
+          description: Insufficient authorization level
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorUnknown'
+          description: error returned for a 404 indicating one of the provided params
+            us unknown
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+          description: an internal error occurred
+      tags:
+      - containment
+components:
+  parameters:
+    vendor:
+      description: "key used to identify vendor to use, e.g. `crowdstrike`"
+      explode: false
+      in: path
+      name: vendor
+      required: true
+      schema:
+        type: string
+      style: simple
+    deviceId:
+      description: ID of the device as defined by vendor (e.g. Crowdstrike)
+      explode: false
+      in: path
+      name: device_id
+      required: true
+      schema:
+        type: string
+      style: simple
+    organizationId:
+      description: The id of a organization
+      explode: false
+      in: path
+      name: organization_id
+      required: true
+      schema:
+        type: string
+      style: simple
+  responses:
+    SuccessCreated:
+      description: object is created
+    ErrorResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericErrorResponse'
+      description: an internal error occurred
+    ErrorUnknownResponse:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorUnknown'
+      description: error returned for a 404 indicating one of the provided params
+        us unknown
+    HealthCheckResponseMessage:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HealthCheckResponse'
+      description: health check response message
+    ContainmentStatusResponseMessage:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ContainmentStatusResponse'
+      description: containment status list ordered by list of requested device IDs
+    ContainmentActiveResponseMessage:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ContainmentActiveResponse'
+      description: whether or not containment is active for a customer
+  schemas:
+    DeviceIDArray:
+      items:
+        type: string
+      type: array
+    GenericErrorResponse:
+      description: an error envelope; returned when we encounter an unexpected error
+      properties:
+        code:
+          description: an internal error code associated with the specific failure
+          type: string
+        message:
+          description: a human-readable string describing the failure
+          type: string
+        errors:
+          items:
+            $ref: '#/components/schemas/GenericErrorResponse_errors_inner'
+          type: array
+      type: object
+    ErrorUnknown:
+      description: error returned for a 404 indicating one of the provided params
+        is unknown
+      properties:
+        subject:
+          description: which subject is unknown
+          type: string
+        value:
+          description: the value passed in that produced the unknown result
+          type: string
+        message:
+          description: a human-readable string describing the failure
+          type: string
+      required:
+      - message
+      - subject
+      - value
+      type: object
+    ErrorUnknownResponse:
+      description: error returned for a 404 indicating one of the provided params
+        is unknown
+      properties:
+        subject:
+          description: which subject is unknown
+          type: string
+        value:
+          description: the value passed in that produced the unknown result
+          type: string
+        message:
+          description: a human-readable string describing the failure
+          type: string
+      required:
+      - message
+      - subject
+      - value
+      type: object
+    HealthCheckResponse:
+      example:
+        version: version
+        status: status
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+      type: object
+    ContainmentStatusResponse:
+      example:
+        count: 0
+        items:
+        - device_id: device_id
+          status: normal
+        - device_id: device_id
+          status: normal
+      properties:
+        count:
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/ContainmentStatus'
+          type: array
+      required:
+      - count
+      - items
+      type: object
+    ContainmentActiveResponse:
+      example:
+        active: true
+      properties:
+        active:
+          type: boolean
+      required:
+      - active
+      type: object
+    ContainmentStatus:
+      description: The containment status of the requested device
+      example:
+        device_id: device_id
+        status: normal
+      properties:
+        device_id:
+          type: string
+        status:
+          enum:
+          - normal
+          - lift_containment_pending
+          - contained
+          - containment_pending
+          type: string
+      required:
+      - device_id
+      - status
+      type: object
+    DeviceIDList:
+      description: Array of deviceIDs
+      properties:
+        device_ids:
+          description: ID of the device
+          items:
+            type: string
+          type: array
+      required:
+      - device_ids
+      type: object
+    GenericErrorResponse_errors_inner:
+      properties:
+        code:
+          type: integer
+        field:
+          type: string
+        message:
+          type: string
+      type: object
+  securitySchemes:
+    jwtAuth:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

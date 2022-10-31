@@ -1,0 +1,314 @@
+openapi: 3.0.0
+
+info:
+  version: '0.1'
+  title: Entity Containment API
+
+security:
+  - jwtAuth: [ ]
+
+tags:
+  - description: Containment service
+    name: containment
+
+components:
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    SuccessCreated:
+      description: object is created
+
+    ErrorResponse:
+      description: an internal error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericErrorResponse'
+
+    ErrorUnknownResponse:
+      description: error returned for a 404 indicating one of the provided params us unknown
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorUnknown'
+
+    HealthCheckResponseMessage:
+      description: health check response message
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HealthCheckResponse'
+
+    ContainmentStatusResponseMessage:
+      description: containment status list ordered by list of requested device IDs
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ContainmentStatusResponse'
+
+    ContainmentActiveResponseMessage:
+      description: whether or not containment is active for a customer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ContainmentActiveResponse'
+
+  parameters:
+    vendor:
+      name: vendor
+      description: key used to identify vendor to use, e.g. `crowdstrike`
+      in: path
+      required: true
+      schema:
+        type: string
+
+    deviceId:
+      name: device_id
+      description: ID of the device as defined by vendor (e.g. Crowdstrike)
+      in: path
+      required: true
+      schema:
+        type: string
+
+    organizationId:
+      name: organization_id
+      description: The id of a organization
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    DeviceIDArray:
+      type: array
+      items:
+        type: string
+
+    GenericErrorResponse:
+      type: object
+      description: an error envelope; returned when we encounter an unexpected error
+      properties:
+        code:
+          description: an internal error code associated with the specific failure
+          type: string
+        message:
+          description: a human-readable string describing the failure
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: integer
+              field:
+                type: string
+              message:
+                type: string
+
+    ErrorUnknown:
+      type: object
+      description: error returned for a 404 indicating one of the provided params is unknown
+      properties:
+        subject:
+          description: which subject is unknown
+          type: string
+        value:
+          description: the value passed in that produced the unknown result
+          type: string
+        message:
+          description: a human-readable string describing the failure
+          type: string
+      required:
+        - subject
+        - value
+        - message
+
+    ErrorUnknownResponse:
+      type: object
+      description: error returned for a 404 indicating one of the provided params is unknown
+      properties:
+        subject:
+          description: which subject is unknown
+          type: string
+        value:
+          description: the value passed in that produced the unknown result
+          type: string
+        message:
+          description: a human-readable string describing the failure
+          type: string
+      required:
+        - subject
+        - value
+        - message
+
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+
+    ContainmentStatusResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainmentStatus'
+      required:
+        - count
+        - items
+
+    ContainmentActiveResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+      required:
+        - active
+
+    ContainmentStatus:
+      type: object
+      description: The containment status of the requested device
+      properties:
+        device_id:
+          type: string
+        status:
+          type: string
+          enum:
+            - normal
+            - lift_containment_pending
+            - contained
+            - containment_pending
+      required:
+        - device_id
+        - status
+
+    DeviceIDList:
+      type: object
+      description: Array of deviceIDs
+      properties:
+        device_ids:
+          type: array
+          items:
+            type: string
+          description: ID of the device
+      required:
+        - device_ids
+
+paths:
+  /:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      security: [ ]
+      tags: 
+        - containment
+      responses:
+        200:
+          $ref: '#/components/responses/HealthCheckResponseMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+  /containment/v1/organizations/{organization_id}/devices/{vendor}/{device_id}/contain:
+    put:
+      operationId: requestContainment
+      parameters:
+        - $ref: '#/components/parameters/organizationId'
+        - $ref: '#/components/parameters/vendor'
+        - $ref: '#/components/parameters/deviceId'
+
+      description: Request containment of the specified device
+      tags: 
+        - containment
+      responses:
+        202:
+          description: Containment requested succesfully
+        401:
+          description: Missing/invalid awth credentials
+        403:
+          description: Insufficient authorization level
+        404:
+          $ref: '#/components/responses/ErrorUnknownResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  
+  /containment/v1/organizations/{organization_id}/devices/{vendor}/{device_id}/lift-containment:
+    put:
+      operationId: requestLiftContainment
+      parameters:
+        - $ref: '#/components/parameters/organizationId'
+        - $ref: '#/components/parameters/vendor'
+        - $ref: '#/components/parameters/deviceId'
+
+      description: Request to lift containment for the specified device
+      tags: 
+        - containment
+      responses:
+        202:
+          description: Lift containment requested succesfully
+        401:
+          description: Missing/invalid awth credentials
+        403:
+          description: Insufficient authorization level
+        404:
+          $ref: '#/components/responses/ErrorUnknownResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+  /containment/v1/organizations/{organization_id}/devices/{vendor}/containment-status:
+    post:
+      operationId: bulkLookupContainmentStatus
+      parameters:
+        - $ref: '#/components/parameters/organizationId'
+        - $ref: '#/components/parameters/vendor'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceIDList'
+      description: Get the containment status of a specific device for an organization
+      tags: 
+        - containment
+      responses:
+        200:
+          $ref: '#/components/responses/ContainmentStatusResponseMessage'
+        401:
+          description: Missing/invalid awth credentials
+        403:
+          description: Insufficient authorization level
+        404:
+          $ref: '#/components/responses/ErrorUnknownResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+
+  /containment/v1/organizations/{organization_id}/{vendor}/containment-active:
+    get:
+      operationId: lookupIsContainmentActive
+      parameters:
+        - $ref: '#/components/parameters/organizationId'
+        - $ref: '#/components/parameters/vendor'
+      description: Lookup if a specific organization has containment active
+      tags: 
+        - containment
+      responses:
+        200:
+          $ref: '#/components/responses/ContainmentActiveResponseMessage'
+        401:
+          description: Missing/invalid awth credentials
+        403:
+          description: Insufficient authorization level
+        404:
+          $ref: '#/components/responses/ErrorUnknownResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
