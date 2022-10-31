@@ -15,7 +15,7 @@ generate_client:
 		--git-host github.com \
 		--git-repo-id ${GITHUB_REPO} \
 		--git-user-id ${GITHUB_USER} \
-		--additional-properties=packageName=entity-containment,isGoSubmodule=true
+		--additional-properties=packageName=entitycontainment,isGoSubmodule=true
 
 generate_server:
 	npx @openapitools/openapi-generator-cli generate \
